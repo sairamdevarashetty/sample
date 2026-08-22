@@ -1,0 +1,781 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Razorpay Vulcan — Field Notes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0A0F14;
+    --surface:#111922;
+    --surface-2:#0D141B;
+    --line:#22303B;
+    --line-soft:#1A2530;
+    --text:#E9EEF2;
+    --text-mid:#AAB6C0;
+    --text-dim:#6E7B87;
+    --gold:#E3A639;
+    --gold-dim:#8A6A2C;
+    --teal:#4FBDB0;
+    --red:#D9695F;
+    --font-display:'Space Grotesk', sans-serif;
+    --font-body:'IBM Plex Sans', sans-serif;
+    --font-mono:'IBM Plex Mono', monospace;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--font-body);
+    -webkit-font-smoothing:antialiased;
+    background-image:
+      linear-gradient(var(--line-soft) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line-soft) 1px, transparent 1px);
+    background-size: 42px 42px;
+    background-position: -1px -1px;
+    background-attachment: fixed;
+    overflow:hidden;
+  }
+  .app{
+    height:100vh;
+    display:flex;
+    flex-direction:column;
+  }
+  a{color:var(--teal);}
+  :focus-visible{outline:2px solid var(--teal); outline-offset:3px;}
+
+  /* ---------- Header / hop rail ---------- */
+  header.railbar{
+    padding: 18px clamp(16px,4vw,48px) 14px;
+    border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg, rgba(17,25,34,.9), rgba(17,25,34,.55));
+    backdrop-filter: blur(6px);
+    flex-shrink:0;
+  }
+  .brand{
+    font-family:var(--font-mono);
+    font-size:12px;
+    letter-spacing:.14em;
+    color:var(--text-dim);
+    display:flex;
+    align-items:baseline;
+    gap:10px;
+    margin-bottom:16px;
+  }
+  .brand strong{
+    color:var(--gold);
+    font-weight:600;
+    letter-spacing:.14em;
+  }
+  .brand .divider{ color:var(--line); }
+
+  .hoprail{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    position:relative;
+    max-width:980px;
+    margin:0 auto;
+  }
+  .hoprail-track{
+    position:absolute;
+    top:9px;
+    left:14px; right:14px;
+    height:2px;
+    background:var(--line);
+    z-index:0;
+  }
+  .hoprail-fill{
+    position:absolute;
+    top:0; left:0;
+    height:100%;
+    width:0%;
+    background:linear-gradient(90deg, var(--gold-dim), var(--gold));
+    transition: width .5s cubic-bezier(.65,0,.35,1);
+  }
+  .hop{
+    position:relative;
+    z-index:1;
+    background:none;
+    border:none;
+    cursor:pointer;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:8px;
+    padding:0 4px;
+    font-family:var(--font-mono);
+    color:var(--text-dim);
+    flex:1;
+  }
+  .hop .dot{
+    width:18px; height:18px;
+    border-radius:50%;
+    background:var(--surface);
+    border:2px solid var(--line);
+    transition: all .35s ease;
+  }
+  .hop .label{
+    font-size:10.5px;
+    letter-spacing:.08em;
+    text-align:center;
+    white-space:nowrap;
+    transition: color .3s ease;
+  }
+  .hop.done .dot{ background:var(--gold-dim); border-color:var(--gold); }
+  .hop.active .dot{
+    background:var(--gold);
+    border-color:var(--gold);
+    box-shadow: 0 0 0 5px rgba(227,166,57,.15);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  .hop.active .label{ color:var(--gold); }
+  .hop.done .label{ color:var(--text-mid); }
+  @keyframes pulse{
+    0%,100%{ box-shadow: 0 0 0 5px rgba(227,166,57,.15); }
+    50%{ box-shadow: 0 0 0 8px rgba(227,166,57,.05); }
+  }
+  @media (max-width: 640px){
+    .hop .label{ display:none; }
+    .hoprail-track{ top:7px; }
+    .hop .dot{ width:14px; height:14px; }
+  }
+
+  /* ---------- Stage / chapters ---------- */
+  main.stage{
+    flex:1;
+    overflow-y:auto;
+    padding: clamp(28px,5vw,64px) clamp(16px,5vw,48px) 40px;
+  }
+  .chapter{
+    display:none;
+    max-width:740px;
+    margin:0 auto;
+    animation: rise .45s ease both;
+  }
+  .chapter.active{ display:block; }
+  @keyframes rise{
+    from{ opacity:0; transform:translateY(10px); }
+    to{ opacity:1; transform:translateY(0); }
+  }
+  .eyebrow{
+    font-family:var(--font-mono);
+    font-size:12px;
+    letter-spacing:.16em;
+    color:var(--teal);
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:16px;
+  }
+  .eyebrow .n{ color:var(--gold); }
+
+  /* the driving question — this is the signature element */
+  .query{
+    display:flex;
+    gap:14px;
+    align-items:flex-start;
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    border-left:3px solid var(--teal);
+    border-radius:0 10px 10px 0;
+    padding:16px 20px;
+    margin-bottom:26px;
+  }
+  .query .mark{
+    font-family:var(--font-mono);
+    font-size:20px;
+    font-weight:600;
+    color:var(--teal);
+    line-height:1.3;
+    flex-shrink:0;
+  }
+  .query .qbody{ flex:1; }
+  .query .qlabel{
+    font-family:var(--font-mono);
+    font-size:10px;
+    letter-spacing:.14em;
+    color:var(--text-dim);
+    text-transform:uppercase;
+    margin-bottom:5px;
+  }
+  .query .qtext{
+    font-family:var(--font-mono);
+    font-size:16px;
+    line-height:1.5;
+    color:var(--text);
+  }
+  @media (max-width:640px){
+    .query .qtext{ font-size:14.5px; }
+  }
+  h1.ctitle{
+    font-family:var(--font-display);
+    font-weight:600;
+    font-size:clamp(28px,4.4vw,42px);
+    line-height:1.12;
+    letter-spacing:-.01em;
+    margin-bottom:18px;
+  }
+  .lead{
+    font-size:17px;
+    line-height:1.65;
+    color:var(--text-mid);
+    margin-bottom:28px;
+    max-width:62ch;
+  }
+  h2.sub{
+    font-family:var(--font-display);
+    font-size:15px;
+    font-weight:600;
+    letter-spacing:.02em;
+    color:var(--text);
+    margin:34px 0 12px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  h2.sub::before{
+    content:'';
+    width:14px; height:1px;
+    background:var(--gold);
+    display:inline-block;
+  }
+  p.body-text{
+    font-size:15px;
+    line-height:1.7;
+    color:var(--text-mid);
+    margin-bottom:14px;
+    max-width:64ch;
+  }
+  p.body-text strong{ color:var(--text); font-weight:600; }
+  code.tok{
+    font-family:var(--font-mono);
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    color:var(--teal);
+    padding:1px 6px;
+    border-radius:4px;
+    font-size:13px;
+  }
+
+  /* stat grid */
+  .stat-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+    gap:1px;
+    background:var(--line);
+    border:1px solid var(--line);
+    border-radius:8px;
+    overflow:hidden;
+    margin:20px 0 26px;
+  }
+  .stat{
+    background:var(--surface);
+    padding:16px 16px 14px;
+  }
+  .stat .num{
+    font-family:var(--font-display);
+    font-size:26px;
+    font-weight:600;
+    color:var(--gold);
+    line-height:1.1;
+  }
+  .stat .lbl{
+    font-size:11.5px;
+    color:var(--text-dim);
+    margin-top:6px;
+    line-height:1.4;
+  }
+
+  /* tables */
+  .tbl-wrap{
+    border:1px solid var(--line);
+    border-radius:8px;
+    overflow:hidden;
+    margin:18px 0 28px;
+  }
+  table.compare{
+    width:100%;
+    border-collapse:collapse;
+    font-size:13.5px;
+  }
+  table.compare th{
+    font-family:var(--font-mono);
+    font-size:11px;
+    letter-spacing:.06em;
+    text-align:left;
+    color:var(--text-dim);
+    background:var(--surface-2);
+    padding:10px 14px;
+    border-bottom:1px solid var(--line);
+    font-weight:500;
+  }
+  table.compare td{
+    padding:11px 14px;
+    border-bottom:1px solid var(--line-soft);
+    color:var(--text-mid);
+    line-height:1.5;
+    vertical-align:top;
+  }
+  table.compare tr:last-child td{ border-bottom:none; }
+  table.compare td.rowhead{
+    color:var(--text);
+    font-weight:600;
+    white-space:nowrap;
+    font-family:var(--font-mono);
+    font-size:12.5px;
+  }
+  table.compare td.win{ color:var(--teal); }
+  table.compare tbody tr:hover td{ background:var(--surface); }
+
+  /* diagram */
+  .diagram{
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:18px 20px;
+    margin:18px 0 28px;
+    overflow-x:auto;
+  }
+  .diagram .cap{
+    font-family:var(--font-mono);
+    font-size:10.5px;
+    letter-spacing:.08em;
+    color:var(--text-dim);
+    margin-bottom:10px;
+    text-transform:uppercase;
+  }
+  .diagram pre{
+    font-family:var(--font-mono);
+    font-size:12.5px;
+    line-height:1.6;
+    color:var(--text-mid);
+    white-space:pre;
+  }
+  .diagram pre .g{ color:var(--gold); }
+  .diagram pre .t{ color:var(--teal); }
+  .diagram pre .w{ color:var(--text); }
+
+  /* callout */
+  .callout{
+    border-left:2px solid var(--gold);
+    background:var(--surface);
+    padding:14px 18px;
+    border-radius:0 8px 8px 0;
+    margin:18px 0 28px;
+    font-size:14px;
+    line-height:1.65;
+    color:var(--text-mid);
+  }
+  .callout .k{
+    font-family:var(--font-mono);
+    font-size:10.5px;
+    letter-spacing:.1em;
+    color:var(--gold);
+    display:block;
+    margin-bottom:6px;
+  }
+
+  .sources{
+    font-family:var(--font-mono);
+    font-size:11px;
+    color:var(--text-dim);
+    margin-top:40px;
+    padding-top:16px;
+    border-top:1px dashed var(--line);
+    line-height:1.8;
+  }
+  .sources span{ color:var(--text-dim); }
+
+  /* ---------- Footer controls ---------- */
+  footer.controls{
+    flex-shrink:0;
+    border-top:1px solid var(--line);
+    background:var(--surface);
+    padding:14px clamp(16px,5vw,48px);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+  }
+  .navbtn{
+    font-family:var(--font-mono);
+    font-size:12.5px;
+    letter-spacing:.05em;
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    color:var(--text);
+    padding:10px 18px;
+    border-radius:6px;
+    cursor:pointer;
+    transition: all .2s ease;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .navbtn:hover:not(:disabled){ border-color:var(--gold); color:var(--gold); }
+  .navbtn:disabled{ opacity:.3; cursor:default; }
+  .navbtn.primary{
+    background:var(--gold);
+    border-color:var(--gold);
+    color:#1A1305;
+    font-weight:600;
+  }
+  .navbtn.primary:hover{ color:#1A1305; border-color:var(--gold); filter:brightness(1.08); }
+  .counter{
+    font-family:var(--font-mono);
+    font-size:12px;
+    color:var(--text-dim);
+    letter-spacing:.05em;
+  }
+  .counter strong{ color:var(--text); }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation:none !important; transition:none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="railbar">
+    <div class="brand"><strong>VULCAN</strong><span class="divider">/</span>FIELD NOTES ON RAZORPAY'S PAYMENTS FOUNDATION MODEL</div>
+    <nav class="hoprail" id="hoprail" aria-label="Chapters">
+      <div class="hoprail-track"><div class="hoprail-fill" id="railFill"></div></div>
+      <button class="hop" data-i="0"><span class="dot"></span><span class="label">INITIATE</span></button>
+      <button class="hop" data-i="1"><span class="dot"></span><span class="label">ROUTE</span></button>
+      <button class="hop" data-i="2"><span class="dot"></span><span class="label">AUTHENTICATE</span></button>
+      <button class="hop" data-i="3"><span class="dot"></span><span class="label">VALIDATE</span></button>
+      <button class="hop" data-i="4"><span class="dot"></span><span class="label">PROCESS</span></button>
+      <button class="hop" data-i="5"><span class="dot"></span><span class="label">SETTLE</span></button>
+    </nav>
+  </header>
+
+  <main class="stage" id="stage">
+
+    <!-- CHAPTER 1 -->
+    <section class="chapter active" data-index="0">
+      <div class="eyebrow"><span class="n">01</span> · What Vulcan Is</div>
+      <div class="query">
+        <span class="mark">❯</span>
+        <div class="qbody">
+          <div class="qlabel">The question that started this</div>
+          <div class="qtext">Tell me about Razorpay's Vulcan.</div>
+        </div>
+      </div>
+      <h1 class="ctitle">A foundation model for the language of money movement</h1>
+      <p class="lead">Vulcan is Razorpay's proprietary, transformer-based AI model, purpose-built to understand transaction patterns and optimize digital payments across India. Instead of processing words, it processes payment events — checkout, routing, risk, and fraud, scored together by one model instead of several disconnected ones.</p>
+
+      <div class="stat-grid">
+        <div class="stat"><div class="num">~3T</div><div class="lbl">data points used in training</div></div>
+        <div class="stat"><div class="num">4B+</div><div class="lbl">digital payments trained on</div></div>
+        <div class="stat"><div class="num">~3,000</div><div class="lbl">transaction signals scored per event, in milliseconds</div></div>
+        <div class="stat"><div class="num">H100</div><div class="lbl">GPU clusters, built with NVIDIA + AWS</div></div>
+      </div>
+
+      <h2 class="sub">What it actually does</h2>
+      <div class="tbl-wrap">
+        <table class="compare">
+          <tr><th style="width:26%">Capability</th><th style="width:42%">What it does</th><th>Observed impact</th></tr>
+          <tr>
+            <td class="rowhead">Smart routing</td>
+            <td>Predicts bank downtime, gateway latency and OTP delays, then routes each transaction through the best live path.</td>
+            <td class="win">8–10% higher transaction success</td>
+          </tr>
+          <tr>
+            <td class="rowhead">Fraud detection</td>
+            <td>Flags stolen cards and risky cash-on-delivery orders before checkout completes, at the network level.</td>
+            <td class="win">8x international card fraud caught, 5x more disputes flagged</td>
+          </tr>
+          <tr>
+            <td class="rowhead">Checkout personalization</td>
+            <td>Surfaces the payment method a user is actually likely to use — UPI app, saved token, EMI — based on context.</td>
+            <td class="win">Meaningfully lower checkout drop-off</td>
+          </tr>
+        </table>
+      </div>
+
+      <p class="body-text">It also strips personally identifiable information before processing and runs entirely on private infrastructure inside India. Quick-commerce platform Blinkit is already running it in production; Razorpay's stated roadmap extends the same backbone to real-time credit underwriting and custom merchant risk scoring — without retraining the base model.</p>
+
+      <div class="sources"><span>Sources —</span> Razorpay Launches Vulcan to Improve Digital Payments · "Vulcan understands the language of money": Harshil Mathur on Razorpay's AI push</div>
+    </section>
+
+    <!-- CHAPTER 2 -->
+    <section class="chapter" data-index="1">
+      <div class="eyebrow"><span class="n">02</span> · Why Not Traditional ML</div>
+      <div class="query">
+        <span class="mark">❯</span>
+        <div class="qbody">
+          <div class="qlabel">The next question</div>
+          <div class="qtext">What's actually different between Vulcan and traditional routing systems?</div>
+        </div>
+      </div>
+      <h1 class="ctitle">One shared model, instead of three that don't talk to each other</h1>
+      <p class="lead">Most payment gateways run an ensemble of narrow models — one scores fraud, another checks gateway uptime, a third predicts OTP latency — stitched together with hardcoded rules. Because each stage runs in isolation, none of them can learn from the others' context in real time.</p>
+
+      <div class="diagram">
+        <div class="cap">Traditional pipeline — three blind models</div>
+        <pre>[Txn Features] ──&gt; <span class="w">Model A: Fraud Score</span>     ──&gt; Hard Gates
+[Txn Features] ──&gt; <span class="w">Model B: Gateway Downtime</span> ──&gt; Priority Queues ──&gt; Route Decision
+[Txn Features] ──&gt; <span class="w">Model C: OTP Latency</span>     ──&gt; Fallbacks</pre>
+      </div>
+
+      <div class="diagram">
+        <div class="cap">Vulcan — one shared representation</div>
+        <pre>[<span class="t">~3,000 signals</span>: issuer, VPA, BIN, latency, auth flow, history]
+        │
+        ▼
+ ┌───────────────────────────┐
+ │ <span class="g">Self-attention / context</span>   │ ──&gt; unified embedding ──&gt; scored together
+ │ (NVIDIA H100 clusters)    │     (health + fraud + checkout, in one pass)
+ └───────────────────────────┘</pre>
+      </div>
+
+      <h2 class="sub">Side by side</h2>
+      <div class="tbl-wrap">
+        <table class="compare">
+          <tr><th style="width:24%">Dimension</th><th>Traditional / rule-based routing</th><th>Vulcan</th></tr>
+          <tr><td class="rowhead">Model type</td><td>Disjoint decision trees, gradient boosting, static rule chains</td><td class="win">One transformer foundation model</td></tr>
+          <tr><td class="rowhead">State awareness</td><td>Reactive — adjusts after failed pings or error spikes</td><td class="win">Predictive — spots latency degrading before it fails</td></tr>
+          <tr><td class="rowhead">Signal depth</td><td>20–50 hand-picked features per model</td><td class="win">~3,000 signals evaluated together</td></tr>
+          <tr><td class="rowhead">New use case</td><td>Train a fresh model from scratch</td><td class="win">Fine-tune a new head on the same backbone</td></tr>
+          <tr><td class="rowhead">Cold starts</td><td>Struggles with novel fraud patterns or sudden spikes</td><td class="win">Self-attention adapts without manual rule resets</td></tr>
+        </table>
+      </div>
+
+      <p class="body-text">At runtime this plays out in three steps: Vulcan <strong>pre-scores every viable route</strong> before a payment is even dispatched; it models <strong>latent friction</strong> — not just "is the bank up" but "how likely is a slow OTP on this carrier, right now"; and it keeps adapting continuously as billions of transactions settle, with no manual rule maintenance.</p>
+
+      <div class="sources"><span>Sources —</span> "Vulcan understands the language of money": Harshil Mathur on Razorpay's AI push · Razorpay Launches Vulcan, India's First AI Payments Foundation Model — Tech Achieve Media</div>
+    </section>
+
+    <!-- CHAPTER 3 -->
+    <section class="chapter" data-index="2">
+      <div class="eyebrow"><span class="n">03</span> · Why A Transformer, Specifically</div>
+      <div class="query">
+        <span class="mark">❯</span>
+        <div class="qbody">
+          <div class="qlabel">The next question</div>
+          <div class="qtext">Why use a transformer architecture for this — why not traditional ML or a regular deep learning model?</div>
+        </div>
+      </div>
+      <h1 class="ctitle">Payments are sequences, not spreadsheet rows</h1>
+      <p class="lead">A gradient-boosted model like XGBoost treats every transaction as one static row. But a real payment is a stream of events over time — a session, a retry, a bank hop. Capturing that history in tabular ML means hand-building thousands of rolling features, which stops scaling well past a few hundred signals.</p>
+
+      <h2 class="sub">Why the alternatives fall short</h2>
+      <div class="tbl-wrap">
+        <table class="compare">
+          <tr><th style="width:30%">Architecture</th><th>Where it breaks at foundation-model scale</th></tr>
+          <tr><td class="rowhead">XGBoost / LightGBM</td><td>Point-in-time only; no shared representation across fraud, routing and checkout — each needs its own model</td></tr>
+          <tr><td class="rowhead">Plain MLPs</td><td>Treats features as independent; can't capture how one signal's meaning depends on another</td></tr>
+          <tr><td class="rowhead">RNNs / LSTMs</td><td>Process events one at a time, which is too slow to pre-train across trillions of data points on GPUs</td></tr>
+          <tr><td class="rowhead">1D-CNNs</td><td>Only see nearby events — can't connect an OTP delay on one carrier to a bank's retry logic elsewhere</td></tr>
+          <tr><td class="rowhead" style="color:var(--gold)">Transformers</td><td class="win">Every signal can attend to every other signal at once, and the math parallelizes cleanly across GPU clusters</td></tr>
+        </table>
+      </div>
+
+      <div class="callout">
+        <span class="k">WHY THIS MATTERS IN PRACTICE</span>
+        A 400ms latency spike on a bank is negligible for a normal net-banking payment — but can be fatal for a high-concurrency UPI flash-sale checkout using dynamic OTP. Self-attention lets the model weigh that context automatically, instead of an engineer hand-coding the interaction.
+      </div>
+
+      <h2 class="sub">One backbone, many downstream tasks</h2>
+      <div class="diagram">
+        <div class="cap">Foundation model paradigm</div>
+        <pre>       [ <span class="t">3 trillion data points</span>: raw payment sequences ]
+                          │
+                          ▼
+              ┌───────────────────────┐
+              │ <span class="g">Pre-trained transformer</span>  │  "language of money movement"
+              │ (shared graph embeddings) │
+              └───────────────────────┘
+           ┌──────────────┼──────────────┐
+           ▼              ▼              ▼
+   [Routing head]   [Fraud head]   [Checkout head]
+   success-path      cross-merchant  method
+   ranking           abuse           personalization</pre>
+      </div>
+
+      <p class="body-text">This is the real payoff: solving a <em>new</em> problem the traditional way means collecting a fresh dataset and training a model from zero. With a foundation backbone, Vulcan only needs a lightweight new head on top of a model that already understands India's payment rails.</p>
+
+      <div class="sources"><span>Sources —</span> "Vulcan understands the language of money": Harshil Mathur on Razorpay's AI push · Razorpay Vulcan: 4B Payments, One Transformer — explainx.ai</div>
+    </section>
+
+    <!-- CHAPTER 4 -->
+    <section class="chapter" data-index="3">
+      <div class="eyebrow"><span class="n">04</span> · Built From Scratch</div>
+      <div class="query">
+        <span class="mark">❯</span>
+        <div class="qbody">
+          <div class="qlabel">The next question</div>
+          <div class="qtext">Was this built ground-up, or is it based on an existing model / LLM?</div>
+        </div>
+      </div>
+      <h1 class="ctitle">Not a fine-tuned LLM — a transformer trained on money, from zero</h1>
+      <p class="lead">Vulcan borrows the mechanics of transformer architecture — multi-head self-attention, sequence embeddings — but it wasn't initialized from an existing language model like GPT or Llama. It was trained from zero weights, and its "vocabulary" was never words to begin with.</p>
+
+      <div class="tbl-wrap">
+        <table class="compare">
+          <tr><th style="width:30%">&nbsp;</th><th>A public LLM</th><th>Vulcan</th></tr>
+          <tr><td class="rowhead">Vocabulary</td><td>Words and subwords</td><td class="win">Bank switch states, VPA patterns, OTP latency, tokenization flags</td></tr>
+          <tr><td class="rowhead">Starting point</td><td>Pre-trained on internet text</td><td class="win">Zero weights, trained only on Razorpay's own network</td></tr>
+          <tr><td class="rowhead">Training scale</td><td>Public web corpora</td><td class="win">~3T data points across 4B+ transactions</td></tr>
+          <tr><td class="rowhead">Compute</td><td>Varies</td><td class="win">NVIDIA H100 clusters, orchestrated on AWS SageMaker</td></tr>
+        </table>
+      </div>
+
+      <h2 class="sub">Why an off-the-shelf model couldn't do this</h2>
+      <p class="body-text"><strong>Data privacy and compliance.</strong> RBI's data localization rules and India's DPDP Act require financial telemetry to stay on isolated, private infrastructure — ruling out external or cloud-hosted general LLM APIs outright.</p>
+      <p class="body-text"><strong>Domain structure.</strong> Public LLMs have no notion of NPCI switch throttling, multi-hop UPI fallback logic, or dynamic OTP flows. Razorpay had to design its own tokenizers and embedding spaces to represent the graph and time-series structure of Indian payment rails specifically.</p>
+
+      <div class="sources"><span>Sources —</span> Razorpay unveils Vulcan AI model to boost India's digital payments — TechGig · "Vulcan understands the language of money": Harshil Mathur on Razorpay's AI push</div>
+    </section>
+
+    <!-- CHAPTER 5 -->
+    <section class="chapter" data-index="4">
+      <div class="eyebrow"><span class="n">05</span> · Turning Payments Into Tokens</div>
+      <div class="query">
+        <span class="mark">❯</span>
+        <div class="qbody">
+          <div class="qlabel">The next question</div>
+          <div class="qtext">How does raw payment data actually get converted into tokens a transformer can read?</div>
+        </div>
+      </div>
+      <h1 class="ctitle">A tokenizer for money instead of words</h1>
+      <p class="lead">Every payment attempt gets converted into a sequence of discrete tokens the transformer can attend over — the payments equivalent of turning a sentence into subwords. Three kinds of signals feed this pipeline.</p>
+
+      <div class="diagram">
+        <div class="cap">Tokenization pipeline</div>
+        <pre>[Raw payment telemetry]
+   │
+   ├─ Categorical  <span class="t">(issuer, gateway, rail, auth type)</span>   ──&gt; vocabulary tokens
+   ├─ Continuous   <span class="t">(latency, amount, history)</span>          ──&gt; quantized buckets
+   └─ Graph        <span class="t">(VPA handle, merchant, device)</span>      ──&gt; node embeddings
+   │
+   ▼
+[<span class="g">token embedding</span> + <span class="g">temporal embedding</span> + <span class="g">channel embedding</span>]
+   │
+   ▼
+[Transformer self-attention layers]</pre>
+      </div>
+
+      <h2 class="sub">Three token families</h2>
+      <p class="body-text"><strong>Categorical state tokens</strong> — bank BINs, error codes like <code class="tok">NPCI_U30</code>, auth types (dynamic OTP, biometric, PIN, 3DS 2.0) — mapped to a fixed vocabulary, the same way words map to a dictionary.</p>
+      <p class="body-text"><strong>Continuous signals</strong> — OTP round-trip latency, transaction velocity, order value — either bucketed into quantile ranges like <code class="tok">LATENCY_400_500MS</code>, or passed through linear projection into continuous embeddings.</p>
+      <p class="body-text"><strong>Graph identifiers</strong> — VPA handles, issuer-acquirer pairs, device footprints — pre-embedded with graph methods (Node2Vec, GNNs) so the banking network's topology is preserved before it ever reaches the transformer.</p>
+
+      <h2 class="sub">How it learns the pattern</h2>
+      <div class="tbl-wrap">
+        <table class="compare">
+          <tr><th style="width:34%">Pre-training objective</th><th>What it teaches the model</th></tr>
+          <tr><td class="rowhead">Masked event modeling</td><td>Hide a token (e.g. the final response code) and predict it from everything upstream — BERT-style</td></tr>
+          <tr><td class="rowhead">Next-event prediction</td><td>Predict the next step in a retry/fallback chain, so routing can anticipate failure before it happens</td></tr>
+          <tr><td class="rowhead">Contrastive trajectory matching</td><td>Pull normal checkout patterns close together in embedding space, push anomalous ones apart</td></tr>
+        </table>
+      </div>
+
+      <div class="sources"><span>Sources —</span> "Vulcan understands the language of money": Harshil Mathur on Razorpay's AI push</div>
+    </section>
+
+    <!-- CHAPTER 6 -->
+    <section class="chapter" data-index="5">
+      <div class="eyebrow"><span class="n">06</span> · Speed At Flash-Sale Scale</div>
+      <div class="query">
+        <span class="mark">❯</span>
+        <div class="qbody">
+          <div class="qlabel">The next question</div>
+          <div class="qtext">How do payments foundation models maintain sub-50ms inference SLAs during flash sales and peak checkout concurrency?</div>
+        </div>
+      </div>
+      <h1 class="ctitle">Staying under 50ms with thousands of transactions per second</h1>
+      <p class="lead">A 70B-parameter chat model would never survive checkout-time inference. A payments foundation model is deliberately built small, compressed, and split across a sync/async serving pipeline so the GPU-bound part only does the minimum required at the millisecond that matters.</p>
+
+      <div class="stat-grid">
+        <div class="stat"><div class="num">20–150M</div><div class="lbl">parameters — compact vs. a typical 70B+ text LLM</div></div>
+        <div class="stat"><div class="num">10–15</div><div class="lbl">dense payment tokens per transaction, vs 40+ for BPE text tokens</div></div>
+        <div class="stat"><div class="num">6–12</div><div class="lbl">attention layers — shallow, to keep O(n²) cost in check</div></div>
+        <div class="stat"><div class="num">5–15ms</div><div class="lbl">actual GPU inference time on the live signals</div></div>
+      </div>
+
+      <h2 class="sub">What's precomputed vs. scored live</h2>
+      <div class="tbl-wrap">
+        <table class="compare">
+          <tr><th style="width:30%">Signal type</th><th style="width:44%">Evaluation phase</th><th>Latency</th></tr>
+          <tr><td class="rowhead">Historical / entity embeddings</td><td>Precomputed async via streaming pipelines, cached in Redis/Aerospike-style stores</td><td class="win">&lt; 2ms (cache lookup)</td></tr>
+          <tr><td class="rowhead">Live network health</td><td>Continuously updated sliding-window aggregation</td><td class="win">&lt; 1ms</td></tr>
+          <tr><td class="rowhead">Routing / risk scoring</td><td>Only the dynamic features + prefetched embeddings hit the GPU</td><td class="win">5–15ms (real inference)</td></tr>
+        </table>
+      </div>
+
+      <h2 class="sub">Under flash-sale load</h2>
+      <p class="body-text"><strong>Compilation & quantization.</strong> The trained model is compiled through TensorRT with kernel fusion and INT8/FP8 quantization, served on NVIDIA Triton — cutting the raw forward pass under 10ms.</p>
+      <p class="body-text"><strong>Dynamic batching.</strong> Incoming requests are batched inside a tight 2–4ms window instead of processed one by one, keeping GPU utilization high without blowing the latency budget.</p>
+
+      <div class="callout">
+        <span class="k">THE SAFETY VALVE</span>
+        If ingress latency crosses roughly 35ms under extreme traffic, a circuit breaker trips: skip full self-attention, fall back to a lightweight quantized linear classifier or a cached routing matrix, and guarantee the payment still reaches the bank without adding checkout delay.
+      </div>
+
+      <div class="sources"><span>Sources —</span> Research synthesis on payments foundation model serving architecture (TensorRT / Triton / dynamic batching patterns)</div>
+    </section>
+
+  </main>
+
+  <footer class="controls">
+    <button class="navbtn" id="prevBtn">← Prev</button>
+    <div class="counter">Chapter <strong id="curNum">01</strong> / 06</div>
+    <button class="navbtn primary" id="nextBtn">Next →</button>
+  </footer>
+
+</div>
+
+<script>
+  const chapters = Array.from(document.querySelectorAll('.chapter'));
+  const hops = Array.from(document.querySelectorAll('.hop'));
+  const total = chapters.length;
+  let current = 0;
+
+  const railFill = document.getElementById('railFill');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const curNum = document.getElementById('curNum');
+  const stage = document.getElementById('stage');
+
+  function render(){
+    chapters.forEach((c,i)=> c.classList.toggle('active', i===current));
+    hops.forEach((h,i)=>{
+      h.classList.toggle('active', i===current);
+      h.classList.toggle('done', i<current);
+    });
+    railFill.style.width = (current/(total-1))*100 + '%';
+    curNum.textContent = String(current+1).padStart(2,'0');
+    prevBtn.disabled = current===0;
+    nextBtn.textContent = current===total-1 ? 'Restart ↺' : 'Next →';
+    stage.scrollTop = 0;
+  }
+
+  function goTo(i){
+    current = Math.max(0, Math.min(total-1, i));
+    render();
+  }
+
+  prevBtn.addEventListener('click', ()=> goTo(current-1));
+  nextBtn.addEventListener('click', ()=>{
+    if(current===total-1){ goTo(0); } else { goTo(current+1); }
+  });
+  hops.forEach(h=> h.addEventListener('click', ()=> goTo(parseInt(h.dataset.i))));
+
+  document.addEventListener('keydown', (e)=>{
+    if(e.key==='ArrowRight') goTo(current+1);
+    if(e.key==='ArrowLeft') goTo(current-1);
+  });
+
+  render();
+</script>
+
+</body>
+</html>
